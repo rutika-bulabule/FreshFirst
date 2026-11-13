@@ -84,3 +84,37 @@ The SQL query was successfully executed in phpMyAdmin.
 - The results matched the expected expiry and storage conditions.
 
 **Overall Status: SQL Testing Successful**
+
+## 4. Database Integrity Validation
+
+**Date:** 13 November 2026
+
+The following database integrity checks were performed:
+
+1. Checked invalid user references in products, verification, history and actions.
+2. Checked invalid product and verification references.
+3. Checked negative and zero product quantities.
+4. Checked expiry dates before purchase dates.
+5. Checked duplicate active product names.
+6. Checked unmatched product categories.
+7. Checked invalid user roles and account status values.
+8. Checked missing product names and storage conditions.
+9. Checked duplicate usernames and category rules.
+10. Checked action status and history event records.
+
+### 5. Validation Findings
+
+- Most integrity checks returned no matching invalid records.
+- One orphan product record was identified: Test Product (product_id: 5), with created_by = 999.
+- No records were deleted or modified during testing.
+- All validation queries were read-only SELECT queries.
+
+### 6. Database Summary
+
+- Total tables: 6
+- Total records: 24
+- Active products: 3
+- Deleted products: 2
+- Total active product quantity: 60
+
+**Conclusion:** Database integrity testing was performed successfully. One orphan user reference was identified and documented for future correction.
