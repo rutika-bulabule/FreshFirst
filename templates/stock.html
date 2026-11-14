@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FreshFirst - Stock</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <style>
+        .edit-box {
+            display: none;
+            background: white;
+            padding: 20px;
+            margin-top: 25px;
+            border-radius: 10px;
+        }
+        .edit-box input, .edit-box select {
+            width: 100%;
+            padding: 9px;
+            margin: 6px 0 12px;
+            box-sizing: border-box;
+        }
+        .edit-button {
+            background: #198754;
+            padding: 7px 12px;
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <h1>FreshFirst - Stock Details</h1>
+    <p>Perishable Stock Verification Register</p>
+</header>
+
+<nav>
+    <a href="/dashboard">Dashboard</a>
+    <a href="/stock">Stock</a>
+    <a href="/add-product">Add Product</a>
+    <a href="/priority">Priority</a>
+    <a href="/actions">Actions</a>
+    <a href="/history">History</a>
+    <a href="/reports">Reports</a>
+</nav>
+
+<main>
+    <h2>Available Products</h2>
+    <button onclick="location.href='/add-product'">+ Add Product</button>
+
+    <section>
+        <table>
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Product Name</th>
+                    <th>Category</th>
+                    <th>Quantity</th>
+                    <th>Expiry Date</th>
+                    <th>Temperature (°C)</th>
+                    <th>Operation</th>
+                </tr>
+            </thead>
+            <tbody id="productTable">
+                <tr><td colspan="7">Loading products...</td></tr>
+            </tbody>
+        </table>
+    </section>
+
+    <section class="edit-box" id="editBox">
+        <h2>Edit Product</h2>
+
+        <form id="editForm">
+            <input type="hidden" id="edit_id">
+
+            <label>Product Name</label>
+            <input type="text" id="edit_name" required>
+
+            <label>Category</label>
+            <select id="edit_category" required>
+                <option value="Fruits">Fruits</option>
+                <option value="Vegetables">Vegetables</option>
+                <option value="Dairy">Dairy</option>
+                <option value="Bakery">Bakery</option>
+            </select>
+
+            <label>Quantity</label>
+            <input type="number" id="edit_quantity" min="1" required>
+
+            <label>Purchase Date</label>
+            <input type="date" id="edit_purchase_date" required>
+
+            <label>Expiry Date</label>
+            <input type="date" id="edit_expiry_date" required>
+
+            <label>Storage Condition</label>
+            <select id="edit_storage_condition" required>
+                <option value="REFRIGERATED">Refrigerated</option>
+                <option value="ROOM TEMPERATURE">Room Temperature</option>
+                <option value="COOL STORAGE">Cool Storage</option>
+            </select>
+
+            <label>Recorded Temperature (°C)</label>
+            <input type="number" id="edit_recorded_temp" step="0.01">
+
+            <button type="submit">Save Changes</button>
+            <button type="button" onclick="closeEdit()">Cancel</button>
+        </form>
+
+        <p id="editMessage"></p>
+    </section>
+</main>
+
+<script>
+let productList = [];
+
+async function loadProducts() {
+    const table = document.getElementById("productTable");
+
+    try {
+        const response = await fetch("/api/products");
+        const products = await response.json();
+
+        if (!response.ok) {
+            table.innerHTML = `<tr><td colspan="7">${products.error}</td></tr>`;
+            return;
+        }
+
+        productList = products;
+        table.innerHTML = "";
+
+        if (products.length === 0) {
+            table.innerHTML = '<tr><td colspan="7">No products found</td></tr>';
+            return;
+        }
+
+        products.forEach(product => {
+            const row = document.createElement("tr");
+
+            [
+                product.product_id,
+                product.name,
+                product.category,
+                product.quantity,
+                product.expiry_date,
+                product.recorded_temp == null ? "Not recorded" : Number(product.recorded_temp).toFixed(2) + " °C"
+            ].forEach(value => {
+                const cell = document.createElement("td");
+                cell.textContent = value ?? "";
+                row.appendChild(cell);
+            });
+
+            const operation = document.createElement("td");
+            const button = document.createElement("button");
+            button.textContent = "Edit";
+            button.className = "edit-button";
+            button.onclick = () => openEdit(product.product_id);
+            operation.appendChild(button);
+
+            const deleteButton = document.createElement("button");
+            deleteButton.textContent = "Delete";
+            deleteButton.style.backgroundColor = "#dc3545";
+            deleteButton.style.color = "white";
+            deleteButton.style.marginLeft = "8px";
+            deleteButton.onclick = () => deleteProduct(product.product_id, product.name);
+            operation.appendChild(deleteButton);
+
+            row.appendChild(operation);
+
+            table.appendChild(row);
+        });
+
+    } catch (error) {
+        table.innerHTML = '<tr><td colspan="7">Unable to load products</td></tr>';
+    }
+}
+
+
+async function deleteProduct(id, name) {
+    if (!confirm("Are you sure you want to delete " + name + "?")) {
+        return;
+    }
+
+    try {
+        const response = await fetch("/api/products/" + id + "/delete", {
+            method: "POST"
+        });
+
+        const result = await response.json();
+
+        if (response.ok) {
+            alert("Product deleted successfully!");
+            await loadProducts();
+        } else {
+            alert(result.error || "Unable to delete product.");
+        }
+    } catch (error) {
+        alert("Unable to connect to server.");
+    }
+}
+
+function openEdit(id) {
+    const product = productList.find(item => item.product_id === id);
+
+    if (!product) {
+        alert("Product details not found.");
+        return;
+    }
+
+    document.getElementById("edit_id").value = product.product_id;
+    document.getElementById("edit_name").value = product.name;
+    document.getElementById("edit_category").value = product.category;
+    document.getElementById("edit_quantity").value = product.quantity;
+    document.getElementById("edit_purchase_date").value = String(product.purchase_date).substring(0, 10);
+    document.getElementById("edit_expiry_date").value = String(product.expiry_date).substring(0, 10);
+    document.getElementById("edit_storage_condition").value = product.storage_condition;
+    document.getElementById("edit_recorded_temp").value = product.recorded_temp ?? "";
+
+    document.getElementById("editMessage").textContent = "";
+    document.getElementById("editBox").style.display = "block";
+    document.getElementById("editBox").scrollIntoView({behavior: "smooth"});
+}
+
+function closeEdit() {
+    document.getElementById("editBox").style.display = "none";
+}
+
+document.getElementById("editForm").addEventListener("submit", async function(event) {
+    event.preventDefault();
+
+    const id = document.getElementById("edit_id").value;
+
+    const product = {
+        name: document.getElementById("edit_name").value,
+        category: document.getElementById("edit_category").value,
+        quantity: document.getElementById("edit_quantity").value,
+        purchase_date: document.getElementById("edit_purchase_date").value,
+        expiry_date: document.getElementById("edit_expiry_date").value,
+        storage_condition: document.getElementById("edit_storage_condition").value,
+        recorded_temp: document.getElementById("edit_recorded_temp").value
+    };
+
+    const message = document.getElementById("editMessage");
+
+    try {
+        const response = await fetch(`/api/products/${id}/update`, {
+            method: "PUT",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify(product)
+        });
+
+        const result = await response.json();
+
+        if (response.ok) {
+            message.style.color = "green";
+            message.textContent = result.message;
+            await loadProducts();
+            setTimeout(closeEdit, 1000);
+        } else {
+            message.style.color = "red";
+            message.textContent = result.error;
+        }
+
+    } catch (error) {
+        message.style.color = "red";
+        message.textContent = "Unable to update product.";
+    }
+});
+
+loadProducts();
+</script>
+
+</body>
+</html>

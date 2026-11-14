@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>FreshFirst - History</title>
+<style>
+body{font-family:Arial;background:#f4f7f4;padding:25px;color:#26352b}
+h1{color:#267343}
+button{background:#267343;color:white;border:0;padding:10px 18px;border-radius:5px;cursor:pointer}
+section{background:white;padding:20px;border-radius:10px;margin-top:20px;overflow-x:auto}
+table{width:100%;border-collapse:collapse}
+th,td{padding:12px;text-align:left;border-bottom:1px solid #ddd}
+th{background:#e8f2e9}
+</style>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+<h1>FreshFirst Activity History</h1>
+<button onclick="location.href='/dashboard'">Dashboard</button>
+<button onclick="loadHistory()">Refresh</button>
+<section>
+<p id="message">Loading history...</p>
+<table>
+<thead><tr><th>ID</th><th>Product</th><th>User</th><th>Event</th><th>Details</th><th>Date & Time</th></tr></thead>
+<tbody id="history"></tbody>
+</table>
+</section>
+<script>
+async function loadHistory(){
+try{
+const response=await fetch('/api/history');
+const data=await response.json();
+if(!response.ok) throw new Error(data.error || 'Unable to load history');
+document.getElementById('message').textContent='Total records: '+data.length;
+document.getElementById('history').innerHTML=data.map(x=>
+`<tr><td>${x.history_id}</td><td>${x.product_name}</td><td>${x.full_name}</td><td>${x.event_type}</td><td>${x.details || ''}</td><td>${x.event_time || ''}</td></tr>`
+).join('') || '<tr><td colspan="6">No history records found</td></tr>';
+}catch(error){document.getElementById('message').textContent=error.message;}
+}
+loadHistory();
+</script>
+</body>
+</html>

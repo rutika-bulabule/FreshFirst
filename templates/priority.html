@@ -1,0 +1,140 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FreshFirst - Priority</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <style>
+        .priority-card {
+            display: inline-block;
+            padding: 12px 20px;
+            margin: 8px;
+            border-radius: 8px;
+            background: white;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+        .badge {
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-weight: bold;
+        }
+        .CRITICAL { background: #ffcccc; color: #a00000; }
+        .HIGH { background: #ffe0b2; color: #a34b00; }
+        .MEDIUM { background: #fff2b3; color: #755900; }
+        .LOW { background: #d7f5df; color: #176b45; }
+        .INSPECTION-NEEDED { background: #e5ddff; color: #51359b; }
+    </style>
+</head>
+<body>
+<header>
+    <h1>FreshFirst - Priority List</h1>
+    <p>Perishable Stock Verification Register</p>
+</header>
+
+<nav>
+    <a href="/dashboard">Dashboard</a>
+    <a href="/stock">Stock</a>
+    <a href="/add-product">Add Product</a>
+    <a href="/actions">Actions</a>
+    <a href="/history">History</a>
+    <a href="/reports">Reports</a>
+    <a href="/priority">Priority</a>
+</nav>
+
+<main>
+    <h2>Product Priority</h2>
+    <div id="summary"></div>
+
+    <section>
+        <button onclick="loadPriority()">Refresh Priority</button>
+        <p id="message">Loading priority data...</p>
+        <table>
+            <thead>
+                <tr>
+                    <th>Product ID</th>
+                    <th>Product Name</th>
+                    <th>Priority</th>
+                    <th>Expiry Status</th>
+                    <th>Days Left</th>
+                    <th>Storage</th>
+                    <th>Suggested Action</th>
+                </tr>
+            </thead>
+            <tbody id="priorityTable"></tbody>
+        </table>
+    </section>
+</main>
+
+<script>
+async function loadPriority() {
+    const message = document.getElementById("message");
+    const table = document.getElementById("priorityTable");
+    const summary = document.getElementById("summary");
+
+    message.textContent = "Loading...";
+    table.innerHTML = "";
+
+    try {
+        const response = await fetch("/api/priority");
+        const data = await response.json();
+
+        if (!response.ok) {
+            message.textContent = data.error || "Unable to load priority data.";
+            return;
+        }
+
+        const counts = {};
+        data.forEach(item => {
+            counts[item.priority] = (counts[item.priority] || 0) + 1;
+        });
+
+        summary.innerHTML = "";
+        ["CRITICAL", "HIGH", "MEDIUM", "INSPECTION NEEDED", "LOW"].forEach(level => {
+            const card = document.createElement("div");
+            card.className = "priority-card";
+            card.textContent = level + ": " + (counts[level] || 0);
+            summary.appendChild(card);
+        });
+
+        data.forEach(item => {
+            const row = document.createElement("tr");
+            const values = [
+                item.product_id,
+                item.product_name,
+                item.priority,
+                item.expiry_status,
+                item.days_left,
+                item.storage_status,
+                item.suggested_action
+            ];
+
+            values.forEach((value, index) => {
+                const cell = document.createElement("td");
+
+                if (index === 2) {
+                    const badge = document.createElement("span");
+                    badge.className = "badge " + item.priority.replaceAll(" ", "-");
+                    badge.textContent = value;
+                    cell.appendChild(badge);
+                } else {
+                    cell.textContent = value ?? "-";
+                }
+
+                row.appendChild(cell);
+            });
+
+            table.appendChild(row);
+        });
+
+        message.textContent = data.length + " products found.";
+    } catch (error) {
+        message.textContent = "Unable to connect to the server.";
+    }
+}
+
+loadPriority();
+</script>
+</body>
+</html>

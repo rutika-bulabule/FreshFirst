@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>FreshFirst - Actions</title>
+<style>
+body{font-family:Arial;background:#f4f7f4;padding:25px;color:#26352b}
+h1{color:#267343}
+button{background:#267343;color:white;border:0;padding:10px 15px;border-radius:5px;cursor:pointer;margin:4px}
+section{background:white;padding:20px;border-radius:10px;margin-top:20px;overflow-x:auto}
+table{width:100%;border-collapse:collapse}
+th,td{padding:12px;text-align:left;border-bottom:1px solid #ddd}
+th{background:#e8f2e9}
+.pending{color:#b36b00;font-weight:bold}
+.done{color:green;font-weight:bold}
+</style>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+<h1>FreshFirst Action Dashboard</h1>
+<button onclick="location.href='/dashboard'">Dashboard</button>
+<button onclick="loadActions()">Refresh</button>
+<section>
+<p id="message">Loading actions...</p>
+<table>
+<thead>
+<tr><th>ID</th><th>Product</th><th>Priority</th><th>Suggested Action</th><th>Final Action</th><th>Status</th><th>Decision By</th><th>Operation</th></tr>
+</thead>
+<tbody id="actions"></tbody>
+</table>
+</section>
+
+<script>
+async function loadActions(){
+try{
+const response=await fetch('/api/actions');
+const data=await response.json();
+if(!response.ok) throw new Error(data.error || 'Unable to load actions');
+
+document.getElementById('message').textContent='Total actions: '+data.length;
+
+document.getElementById('actions').innerHTML=data.map(x=>`
+<tr>
+<td>${x.action_id}</td>
+<td>${x.product_name}</td>
+<td>${x.priority}</td>
+<td>${x.suggested_action}</td>
+<td>${x.final_action}</td>
+<td class="${x.status==='DONE'?'done':'pending'}">${x.status}</td>
+<td>${x.decided_by_name || '-'}</td>
+<td>${x.status==='PENDING'?`<button onclick="completeAction(${x.action_id},'${x.suggested_action}')">Complete</button>`:'Completed'}</td>
+</tr>`).join('') || '<tr><td colspan="8">No actions found</td></tr>';
+
+}catch(error){
+document.getElementById('message').textContent=error.message;
+}
+}
+
+async function completeAction(id, suggested){
+if(!confirm('Mark this action as completed?')) return;
+try{
+const response=await fetch('/api/actions/'+id+'/complete',{
+method:'POST',
+headers:{'Content-Type':'application/json'},
+body:JSON.stringify({final_action:suggested})
+});
+const data=await response.json();
+if(!response.ok) throw new Error(data.error || 'Unable to complete action');
+alert(data.message);
+loadActions();
+}catch(error){alert(error.message);}
+}
+loadActions();
+</script>
+</body>
+</html>

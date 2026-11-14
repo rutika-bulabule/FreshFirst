@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>FreshFirst - Add Product</title>
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #f1f8f3;
+            margin: 0;
+            padding: 30px;
+        }
+
+        .container {
+            max-width: 550px;
+            margin: auto;
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 3px 12px #cccccc;
+        }
+
+        h2 {
+            color: #198754;
+            text-align: center;
+        }
+
+        label {
+            display: block;
+            margin-top: 15px;
+            font-weight: bold;
+        }
+
+        input, select {
+            width: 100%;
+            padding: 10px;
+            margin-top: 6px;
+            box-sizing: border-box;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+
+        button {
+            width: 100%;
+            margin-top: 22px;
+            padding: 12px;
+            background: #198754;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+
+        button:hover {
+            background: #146c43;
+        }
+
+        #message {
+            text-align: center;
+            margin-top: 15px;
+        }
+
+        a {
+            display: block;
+            text-align: center;
+            margin-top: 20px;
+            color: #198754;
+        }
+    </style>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+
+<body>
+
+<div class="container">
+
+    <h2>Add New Product</h2>
+
+    <form id="productForm">
+
+        <label>Product Name</label>
+        <input type="text" id="name" required>
+
+        <label>Category</label>
+        <select id="category" required>
+            <option value="">Select Category</option>
+            <option value="Fruits">Fruits</option>
+            <option value="Vegetables">Vegetables</option>
+            <option value="Dairy">Dairy</option>
+            <option value="Bakery">Bakery</option>
+        </select>
+
+        <label>Quantity</label>
+        <input type="number" id="quantity" min="1" required>
+
+        <label>Purchase Date</label>
+        <input type="date" id="purchase_date" required>
+
+        <label>Expiry Date</label>
+        <input type="date" id="expiry_date" required>
+
+        <label>Storage Condition</label>
+        <select id="storage_condition" required>
+            <option value="">Select Storage</option>
+            <option value="REFRIGERATED">Refrigerated</option>
+            <option value="ROOM TEMPERATURE">Room Temperature</option>
+            <option value="COOL STORAGE">Cool Storage</option>
+        </select>
+
+        <label>Recorded Temperature (°C)</label>
+        <input type="number" id="recorded_temp" step="0.01">
+
+        <button type="submit">Add Product</button>
+
+    </form>
+
+    <p id="message"></p>
+
+    <a href="/stock">Back to Stock</a>
+
+</div>
+
+<script>
+
+document.getElementById("productForm").addEventListener("submit", async function(event) {
+
+    event.preventDefault();
+
+    const product = {
+        name: document.getElementById("name").value,
+        category: document.getElementById("category").value,
+        quantity: document.getElementById("quantity").value,
+        purchase_date: document.getElementById("purchase_date").value,
+        expiry_date: document.getElementById("expiry_date").value,
+        storage_condition: document.getElementById("storage_condition").value,
+        recorded_temp: document.getElementById("recorded_temp").value
+    };
+
+    const message = document.getElementById("message");
+
+    try {
+
+        const response = await fetch("/api/products/add", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify(product)
+        });
+
+        const result = await response.json();
+
+        if (response.ok) {
+
+            message.style.color = "green";
+            message.innerText = result.message;
+
+            document.getElementById("productForm").reset();
+
+            setTimeout(function() {
+                window.location.href = "/stock";
+            }, 1200);
+
+        } else {
+
+            message.style.color = "red";
+            message.innerText = result.error;
+
+        }
+
+    } catch (error) {
+
+        message.style.color = "red";
+        message.innerText = "Something went wrong. Please try again.";
+
+    }
+
+});
+
+</script>
+
+</body>
+</html>

@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FreshFirst - Reports</title>
+<style>
+body{font-family:Arial,sans-serif;background:#f4f7f4;margin:0;padding:25px;color:#26352b}
+header{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap}
+h1{color:#267343}
+button{background:#267343;color:white;border:0;padding:10px 18px;border-radius:6px;cursor:pointer}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:18px;margin:25px 0}
+.card{background:white;padding:22px;border-radius:10px;box-shadow:0 2px 8px #ddd}
+.card h3{color:#55715d;font-size:15px}
+.card p{font-size:28px;font-weight:bold;margin:10px 0}
+section{background:white;padding:20px;margin:20px 0;border-radius:10px;box-shadow:0 2px 8px #ddd}
+table{width:100%;border-collapse:collapse;margin-top:12px}
+th,td{text-align:left;padding:12px;border-bottom:1px solid #ddd}
+th{background:#e8f2e9}
+.error{color:#b00020}
+</style>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+<header>
+<h1>FreshFirst Reports</h1>
+<div>
+<button onclick="loadReports()">Refresh Reports</button>
+<button onclick="location.href='/dashboard'">Dashboard</button>
+</div>
+</header>
+
+<div id="message">Loading reports...</div>
+
+<div class="cards">
+<div class="card"><h3>Total Active Products</h3><p id="total">0</p></div>
+<div class="card"><h3>Expired</h3><p id="expired">0</p></div>
+<div class="card"><h3>Near Expiry</h3><p id="near">0</p></div>
+<div class="card"><h3>Valid</h3><p id="valid">0</p></div>
+<div class="card"><h3>Pending Actions</h3><p id="pending">0</p></div>
+<div class="card"><h3>Completed Actions</h3><p id="completed">0</p></div>
+</div>
+
+<section>
+<h2>Priority Summary</h2>
+<table><thead><tr><th>Priority</th><th>Total</th></tr></thead>
+<tbody id="priorities"></tbody></table>
+</section>
+
+<section>
+<h2>Category-wise Stock</h2>
+<table><thead><tr><th>Category</th><th>Products</th><th>Total Quantity</th></tr></thead>
+<tbody id="categories"></tbody></table>
+</section>
+
+<section>
+<h2>Expiry Summary</h2>
+<table><thead><tr><th>Expiry Status</th><th>Total</th></tr></thead>
+<tbody id="expiry"></tbody></table>
+<p>Expiry and priority summaries use the latest saved verification for each product.</p>
+</section>
+
+<script>
+async function loadReports(){
+    const message=document.getElementById("message");
+    message.textContent="Loading reports...";
+    try{
+        const response=await fetch("/api/reports");
+        const data=await response.json();
+        if(!response.ok) throw new Error(data.error || "Unable to load reports");
+
+        document.getElementById("total").textContent=data.total_products;
+        const expiry=data.expiry_summary || [];
+        const priorities=data.priority_summary || [];
+        const actions=data.action_summary || [];
+
+        function count(list,key,value){
+            const row=list.find(item=>item[key]===value);
+            return row ? row.total : 0;
+        }
+
+        document.getElementById("expired").textContent=count(expiry,"expiry_status","EXPIRED");
+        document.getElementById("near").textContent=count(expiry,"expiry_status","NEAR EXPIRY");
+        document.getElementById("valid").textContent=count(expiry,"expiry_status","VALID")+count(expiry,"expiry_status","SAFE");
+        document.getElementById("pending").textContent=count(actions,"status","PENDING");
+        document.getElementById("completed").textContent=count(actions,"status","DONE");
+
+        document.getElementById("priorities").innerHTML=priorities.map(x=>
+            `<tr><td>${x.priority}</td><td>${x.total}</td></tr>`).join("")
+            || "<tr><td colspan='2'>No verification records</td></tr>";
+
+        document.getElementById("categories").innerHTML=(data.category_summary || []).map(x=>
+            `<tr><td>${x.category}</td><td>${x.total_products}</td><td>${x.total_quantity}</td></tr>`).join("")
+            || "<tr><td colspan='3'>No stock records</td></tr>";
+
+        document.getElementById("expiry").innerHTML=expiry.map(x=>
+            `<tr><td>${x.expiry_status}</td><td>${x.total}</td></tr>`).join("")
+            || "<tr><td colspan='2'>No verification records</td></tr>";
+
+        message.textContent="Reports loaded successfully!";
+    }catch(error){
+        message.textContent=error.message;
+        message.className="error";
+    }
+}
+loadReports();
+</script>
+</body>
+</html>
